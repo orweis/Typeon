@@ -425,6 +425,8 @@ class TypeonTyper(TypeonChecker):
 
     #BinOp(expr left, operator op, expr right)
     def visit_BinOp(self, node):
+        node.left = self.visit(node.left)
+        node.right = self.visit(node.right)
         if not self.checkTypeCompatibility( [node.left, node.right]):
             self._errors.append(OpTypeErrorMark(node, node.op, [node.left, node.right] ))
         return self.basicVisit(node)
