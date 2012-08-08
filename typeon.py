@@ -77,6 +77,9 @@ class ModuleHandler(object):
 
         
 
+def var(typeClass = None, defaultValue = None ):
+    return defaultValue
+  
 
 
 def compile():
@@ -87,6 +90,8 @@ def compile():
         raise typeonErr
 
 
+class Typeon:
+    compile = staticmethod(compile)
 
 
 

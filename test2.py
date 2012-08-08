@@ -1,5 +1,5 @@
-import typeon
-T = None
+from typeon import Typeon, var
+
 
 class Z:
     def __init__(self):
@@ -9,18 +9,20 @@ class Z:
 ##def doMath( r = int(6), fraction=float() , z="KKK" ):
 
 
-def doMath( r = T:int(6), fraction=float() , z="KKK" ):
+def doMath( r = var(int,6), fraction = var(float,8) , z="KKK" ):
     pass
 
-
-
-    
-def doMath( (int,r), (float,fraction) , z="KKK" ):
-    if item is True:
-        q = (jump(y) + h)
-    r = r + 1
-    r = r + ""
-    return r / int(fraction)
+##def doMath( r = int(6), fraction=float() , z="KKK" ):
+##    pass
+##
+##
+##    
+##def doMath( (int,r), (float,fraction) , z="KKK" ):
+##    if item is True:
+##        q = (jump(y) + h)
+##    r = r + 1
+##    r = r + ""
+##    return r / int(fraction)
 
 
 def mainTest():
@@ -29,4 +31,4 @@ def mainTest():
     
 
 
-typeon.compile()
+Typeon.compile()

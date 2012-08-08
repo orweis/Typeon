@@ -6,6 +6,10 @@ import typeonExceptions as typeonExcept
 
 
 
+class Consts:
+    DEF_TYPE = 'var'
+
+
 class AstNode(dataUtils.GenericProxy):
     def __init__(self, target):
         self._proxyWrap(target)
@@ -179,6 +183,13 @@ class TypeonScanner(ast.NodeTransformer):
         self._currentFrame.addObject( AstNode(node) )
         return node
 
+
+    def addArg(self, node, defValue=None):
+        """
+        Add a new argument (part of function definition) object 
+        """
+        return self.addObject(node)
+
     def visit_FunctionDef(self, node):
         #Record the function and dive in the stack
         self.addObject(node)
@@ -186,8 +197,12 @@ class TypeonScanner(ast.NodeTransformer):
         #Handle all defined arguments
         newArgs = []
         changedArgs = False
-        for arg in node.args.args:
-            newArg = self.addObject(arg)
+        #Match each arg name to it's value (if not given match with None)
+        argsWithoutDefault = [None] *(len(node.args.args) -len(node.args.defaults) )
+        argsWithValues = zip( node.args.args, argsWithoutDefault + node.args.defaults )
+        #Iterate and a handle each argument
+        for arg, defVal in argsWithValues:
+            newArg = self.addArg(arg, defVal)
             newArgs.append( newArg )
             if id(newArg) != id(arg) :
                 changedArgs = True
@@ -432,7 +447,12 @@ class TypeonTyper(TypeonChecker):
         return self.basicVisit(node)
             
 
-    def addObject(self, node):
+
+
+    def _handleTupleTypeMarking(self, node):
+        """
+        Handle argument Typed with the tuple arg syntax a.k.a (typeClass, argName)
+        """
         foundType = None
         #Recurse for tuples
         if isinstance(node, ast.Tuple):
@@ -463,6 +483,29 @@ class TypeonTyper(TypeonChecker):
                     newNode.elts = newNames
                 self.currentStackFrame.addObject( AstNode(newNode) )
                 return newNode
+        
+
+
+    def addArg(self, node, defValue=None):
+        """
+        Add a new argument (part of function definition) object 
+        """
+        if isinstance(defValue, ast.Call):
+            if isinstance(defValue.func, ast.Name) and defValue.func.id == Consts.DEF_TYPE :
+                if len(defValue.args) == 2 :
+                    typeName, value = defValue.args
+                    if isinstance(typeName, ast.Name) and typeName.id in self._typeNames:
+                        sig = self._signatures.get(self.currentStackFrame.getName(), CallSignature() )
+                        sig.addArg(typeName.id, AstUtils.nodeToName(node))
+                        self._signatures[self.currentStackFrame.getName()] = sig
+                     
+
+        
+        #Check Tuple type marking
+        result = self._handleTupleTypeMarking(node)
+        if result is not None:
+            return result
+
                     
         self.currentStackFrame.addObject( AstNode(node) )
         return node
