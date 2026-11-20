@@ -92,4 +92,4 @@ class TestPyStack:
         stack = pyUtils.PyStack()
         assert any(m.endswith("test_utils.py") for m in stack.listModules())
         assert stack.listFrameNames()[0] == "test_lists_this_file_and_frame_names"
-        assert "->" in repr(stack) or repr(stack) == ""
+        assert "test_lists_this_file_and_frame_names->" in repr(stack)

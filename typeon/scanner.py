@@ -308,7 +308,11 @@ class TypeonScanner(ast.NodeVisitor):
 
     def visit_NamedExpr(self, node):
         self.visit(node.value)
-        self.visit(node.target)
+        # PEP 572: the target binds in the nearest enclosing non-comprehension scope.
+        frame = self._currentFrame
+        while frame._name == "<comprehension>" and frame.parent is not None:
+            frame = frame.parent
+        frame.addObject(node.target)
 
     def visit_Import(self, node):
         for alias in node.names:
@@ -603,8 +607,20 @@ class TypeonTyper(TypeonChecker):
         expected = sig.getArg(id)
         passed = AstUtils.nodeToType(arg)
         # Only literals have a known type; anything else is not judged.
-        if expected is not None and passed is not None and passed != expected:
+        if (
+            expected is not None
+            and passed is not None
+            and not self._argCompatible(passed, expected)
+        ):
             self._errors.append(CallTypeErrorMark(node, node.func.id, id, arg, passed, expected))
+
+    @staticmethod
+    def _argCompatible(passed, expected):
+        """Accept the numeric tower: bool for int, bool/int for float, any of them for complex."""
+        if passed == expected:
+            return True
+        widening = {"int": {"bool"}, "float": {"bool", "int"}, "complex": {"bool", "int", "float"}}
+        return passed in widening.get(expected, ())
 
     def _typeOf(self, node):
         nodeType = AstUtils.nodeToType(node)

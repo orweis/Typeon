@@ -85,6 +85,9 @@ class TestNames:
     def test_common_constructs_are_not_false_positives(self, source):
         assert errors_of(source) == []
 
+    def test_walrus_in_comprehension_binds_in_enclosing_scope(self):
+        assert errors_of("[y := 1 for _ in range(3)]\nprint(y)\n") == []
+
     def test_comprehension_variable_does_not_leak(self):
         assert len(errors_of("r = [i for i in range(3)]\nprint(i)\n")) == 1
 
@@ -125,6 +128,11 @@ class TestTypes:
                 pass
             """)
         assert len(errs) == 1
+
+    def test_numeric_tower_accepted_for_arguments(self):
+        header = "from typeon import var\ndef f(a=var(int, 1), b=var(float, 1.0)):\n    return a\n"
+        assert errors_of(header + "f(True, 1)\n") == []
+        assert len(errors_of(header + "f(1.5, 1)\nf('x', 1.0)\n")) == 2
 
     def test_untyped_and_nonliteral_arguments_are_not_judged(self):
         assert (

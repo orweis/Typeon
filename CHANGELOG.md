@@ -17,6 +17,14 @@ This is a **breaking** release. See "Migrating from the 2012 code" in the README
   syntax error in Python 3). Use `def f(r=var(int, 6), x=var(float, 8.0))`.
 - Removed `utils/osUtils.py` (`LocalTempFile`, `ResourceLocator`): unused, tied to another
   project's layout, with a path-escape and temp-file cleanup hazards.
+- Scanner subclassing API changed: `TypeonScanner` is now an `ast.NodeVisitor` (was
+  `ast.NodeTransformer`), so subclasses that return replacement nodes no longer rewrite the
+  tree, and `handleModuleAtPath` returns the unmodified AST without type annotations. The
+  hooks `visitSet`, `frameVisit`, `basicVisit`, `visit_Attribute` and
+  `_handleTupleTypeMarking` were removed.
+- While `compile()` re-executes a script run as `__main__`, `__name__` is
+  `_typeon_fused___main__` (so `logging.getLogger(__name__)` created during the re-run has
+  that name); it is restored afterwards.
 - Removed unused `PyStack.listCallers/getStackDepth/listClasses`, and `scanner.AstNode`.
 - Removed the scratch files `play.py` (hard-coded Windows path, removed `imp` module) and
   `test2.py` (moved to `tests/fixtures/var_syntax.py`, ported to Python 3 syntax);
@@ -28,6 +36,7 @@ This is a **breaking** release. See "Migrating from the 2012 code" in the README
 ### Changed (behaviour)
 - `var(int, 6)` parameters now also feed the binary-operator check (as the docs always
   implied), so `r + ""` on such a parameter is reported.
+- A `bool` is accepted for `int`, and `bool`/`int` for `float` (numeric tower).
 - Argument types are only judged when the argument is a literal (non-literals, such as
   variables, were previously reported as mismatches). Parameters without `var()` are
   never judged, and typed parameters are matched by position/keyword correctly.
@@ -42,8 +51,8 @@ This is a **breaking** release. See "Migrating from the 2012 code" in the README
 - Signatures are keyed by qualified name, so same-named nested functions no longer collide.
 - `compile()` finds the calling module from the caller's frame, not a fixed stack depth;
   the module is re-executed in its own namespace (functions share the module's globals,
-  `__name__` guards do not fire during re-execution) and a nested `compile()` call during
-  re-execution is ignored. Syntax errors and over-deep source raise `TypeonException`.
+  `__name__` guards do not fire during re-execution) and a `compile()` call by the module being
+  re-executed is ignored (other modules imported meanwhile are still checked). Syntax errors and over-deep source raise `TypeonException`.
 - The scanner no longer rewrites the AST (it returns it unchanged).
 
 ### Added

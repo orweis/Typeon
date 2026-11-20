@@ -24,12 +24,15 @@ and call `typeon.compile()` at the end of the module:
 import typeon
 from typeon import var
 
+
 def scale(value=var(int, 1), factor=var(float, 2.0)):
     return value * factor
 
+
 def main():
-    scale("two", 3.0)      # error: 'str' instead of 'int'
-    return missing_name    # error: Name 'missing_name' is not defined
+    scale("two", 3.0)  # error: 'str' instead of 'int'
+    return missing_name  # error: Name 'missing_name' is not defined
+
 
 typeon.compile()
 ```
@@ -50,8 +53,9 @@ To check a file **without executing it**:
 
 ```python
 import typeon
-typeon.checkFile("path/to/module.py")     # raises TypeonException on findings
-typeon.checkSource("x = undefined\n")     # same, for a string/bytes
+
+typeon.checkFile("path/to/module.py")  # raises TypeonException on findings
+typeon.checkSource("x = undefined\n")  # same, for a string/bytes
 ```
 
 A deliberately broken example is in `examples/sample.py` (`python examples/sample.py`).
@@ -69,7 +73,8 @@ See `docs/design.md` for the full status table and limitations.
 
 `typeon.compile()` **executes the calling module's top-level code a second time** (in the
 module's own namespace, with `__name__` guards not firing) after checking it. Module-level
-side effects therefore happen twice, and a nested `compile()` during the re-run is ignored.
+side effects therefore happen twice, and the module's own `compile()` call during the re-run is ignored. In a script run as
+`__main__`, `__name__` is `_typeon_fused___main__` during the re-run.
 Only use it on code you would import anyway. For untrusted code use `checkFile` /
 `checkSource`, which only parse. Source nested pathologically deeply is rejected with a
 `TypeonException`, not a crash.

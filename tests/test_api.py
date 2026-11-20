@@ -44,12 +44,56 @@ def test_broken_module_raises_on_import(fixtures_dir):
     assert "undefined_name" in str(info.value)
 
 
-def test_nested_compile_during_fuse_is_ignored(fixtures_dir):
-    # clean_module calls typeon.compile() at module level; the re-execution inside
-    # that call hits compile() again, which must be a no-op (no recursion, no error).
-    import clean_module
+def test_nested_compile_during_fuse_is_ignored(tmp_path, monkeypatch):
+    # The re-execution inside compile() hits compile() again, which must be a no-op:
+    # the module body runs exactly twice (original run + one re-run), not more.
+    import builtins
 
-    assert clean_module.run() == 6.0
+    (tmp_path / "a_mod.py").write_text(
+        "import builtins, typeon\nbuiltins._typeon_runs.append(1)\ntypeon.compile()\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.setattr(builtins, "_typeon_runs", [], raising=False)
+    import a_mod  # noqa: F401
+
+    assert len(builtins._typeon_runs) == 2
+
+
+def test_other_module_imported_during_fuse_is_still_checked(tmp_path, monkeypatch):
+    (tmp_path / "a_mod.py").write_text("import typeon\ntypeon.compile()\nimport b_mod\n")
+    (tmp_path / "b_mod.py").write_text(
+        "import typeon\ndef g():\n    return undefined_name_in_b\ntypeon.compile()\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    with pytest.raises(typeon.TypeonException) as info:
+        import a_mod  # noqa: F401
+    assert "undefined_name_in_b" in str(info.value)
+
+
+def test_fuse_caller_on_main_restores_names(tmp_path, monkeypatch):
+    import sys
+    import types
+
+    from typeon import _fuse
+
+    path = tmp_path / "mainmod.py"
+    path.write_text(
+        "class K:\n    @staticmethod\n    def s():\n        return 1\n\n"
+        "    @classmethod\n    def c(cls):\n        return 2\n\n"
+        "def f():\n    return 3\n"
+        "NAME_DURING = __name__\n"
+    )
+    module = types.ModuleType("__main__")
+    module.__file__ = str(path)
+    monkeypatch.setitem(sys.modules, "__main__", module)
+    frame = types.SimpleNamespace(f_globals=module.__dict__)
+    _fuse.fuseCaller(frame)
+    assert module.__dict__["__name__"] == "__main__"
+    assert module.NAME_DURING == "_typeon_fused___main__"
+    assert module.f.__module__ == "__main__"
+    assert module.K.__dict__["s"].__func__.__module__ == "__main__"
+    assert module.K.__dict__["c"].__func__.__module__ == "__main__"
+    assert module.K.__module__ == "__main__"
 
 
 def test_compile_from_non_module_namespace_is_rejected():

@@ -28,6 +28,11 @@ def _fixModuleNames(namespace, tempName, realName):
         if id(obj) in seen:
             continue
         seen.add(id(obj))
+        # Unwrap staticmethod/classmethod and property accessors.
+        for attr in ("__func__", "fget", "fset", "fdel"):
+            inner = getattr(obj, attr, None)
+            if inner is not None and isinstance(obj, (staticmethod, classmethod, property)):
+                stack.append(inner)
         if getattr(obj, "__module__", None) == tempName and callable(obj):
             try:
                 obj.__module__ = realName
@@ -41,12 +46,14 @@ def fuseCaller(frame):
     """Check the module that owns ``frame`` and re-run its code in that module's namespace.
 
     This executes the module's top-level code a second time; see the README.
-    Calls made while a fuse is already running (i.e. the ``compile()`` call inside
-    the module being re-executed) are ignored.
+    A ``compile()`` call made by a module that is itself being re-executed (the call at
+    the end of that module) is ignored; other modules first imported during the re-run
+    are checked normally.
     """
-    if getattr(_state, "fusing", False):
-        return
     moduleGlobals = frame.f_globals
+    fusing = _state.__dict__.setdefault("fusing", set())
+    if id(moduleGlobals) in fusing:
+        return
     moduleName = moduleGlobals.get("__name__")
     path = moduleGlobals.get("__file__")
     module = sys.modules.get(moduleName)
@@ -64,13 +71,13 @@ def fuseCaller(frame):
 
     # Never let a __main__ guard fire during the re-execution.
     execName = "_typeon_fused_" + moduleName if moduleName == "__main__" else moduleName
-    _state.fusing = True
+    fusing.add(id(moduleGlobals))
     moduleGlobals["__name__"] = execName
     try:
         exec(code, moduleGlobals)
     finally:
         moduleGlobals["__name__"] = moduleName
-        _state.fusing = False
+        fusing.discard(id(moduleGlobals))
     if execName != moduleName:
         _fixModuleNames(moduleGlobals, execName, moduleName)
 
