@@ -6,6 +6,9 @@ treated as 1.x for the purpose of this log.
 
 ## 2.0.0
 
+### License
+- The project is now licensed under the Apache License 2.0 (`LICENSE`).
+
 This is a **breaking** release. See "Migrating from the 2012 code" in the README.
 
 ### Breaking

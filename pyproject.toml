@@ -7,6 +7,8 @@ name = "typeon"
 version = "2.0.0"
 description = "Compile-time name and type checks for Python, written in plain Python."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = []
 classifiers = [

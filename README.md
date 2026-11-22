@@ -103,4 +103,4 @@ CI (GitHub Actions) runs lint and tests on Python 3.11 to 3.14.
 
 ## License
 
-No license file is included yet; until the owner adds one, all rights are reserved by default.
+Licensed under the [Apache License, Version 2.0](LICENSE).
